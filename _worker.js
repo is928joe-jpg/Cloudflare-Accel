@@ -3,30 +3,58 @@
 // 功能: Cloudflare 加速 Docker/GitHub + AWS S3 自动 x-amz 头 + 私有 token + 多重重定向
 
 // 用户配置区域开始 =================================
-const ALLOWED_HOSTS = [
-  'quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io',
-  'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io',
-  'github.com', 'api.github.com', 'raw.githubusercontent.com',
-  'gist.github.com', 'gist.githubusercontent.com'
-];
+// 从环境变量读取配置，如果没有则使用默认值
+function getConfig(env) {
+  // TOKEN_MAPPING 格式: ["url@ENV_VAR","url2@ENV_VAR2", ...]
+  const TOKEN_MAPPING = env.TOKEN_MAPPING || '[]';
+  
+  const ALLOWED_HOSTS = env.ALLOWED_HOSTS || [
+    'quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io',
+    'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io',
+    'github.com', 'api.github.com', 'raw.githubusercontent.com',
+    'gist.github.com', 'gist.githubusercontent.com'
+  ];
 
-const RESTRICT_PATHS = false;
-const ALLOWED_PATHS = ['library', 'user-id-1', 'user-id-2'];
+  const RESTRICT_PATHS = env.RESTRICT_PATHS || false;
+  
+  const ALLOWED_PATHS = env.ALLOWED_PATHS || [
+    'library',   // Docker Hub 官方镜像仓库的命名空间
+    'user-id-1',
+    'user-id-2'
+  ];
 
-// TOKEN_MAPPING 改为 JSON 字符串形式，一次性读取
-// 格式: ["url@ENV_VAR","url2@ENV_VAR2", ...]
+  return {
+    TOKEN_MAPPING,
+    ALLOWED_HOSTS: typeof ALLOWED_HOSTS === 'string' ? JSON.parse(ALLOWED_HOSTS) : ALLOWED_HOSTS,
+    RESTRICT_PATHS: typeof RESTRICT_PATHS === 'string' ? RESTRICT_PATHS === 'true' : RESTRICT_PATHS,
+    ALLOWED_PATHS: typeof ALLOWED_PATHS === 'string' ? JSON.parse(ALLOWED_PATHS) : ALLOWED_PATHS
+  };
+}
+
+// TOKEN_MAPPING 改为 JSON 字符串形式，一次性读取,CF 面板中格式
+// 方式1：逗号分隔（单行）
+// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1,https://api.github.com/repos/private-org@REPO_TOKEN_2
+
+// 方式2：换行分隔（多行）
+// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1
+// https://api.github.com/repos/private-org@REPO_TOKEN_2
+
+// 方式3：混合分隔
+// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1,
+// https://api.github.com/repos/private-org@REPO_TOKEN_2
+ 
 function parseTokenMapping(env) {
-  try {
-    const arr = JSON.parse(env.TOKEN_MAPPING || '[]');
-    return arr.map(item => {
+  const mappingStr = env.TOKEN_MAPPING || '';
+  return mappingStr
+    .split(/[\n,]/)      // 按换行或逗号分割
+    .map(s => s.trim())  // 去掉首尾空格
+    .filter(Boolean)     // 忽略空行
+    .map(item => {
       const [url, env_var] = item.split('@');
       return { url, env_var };
     });
-  } catch (e) {
-    console.error('TOKEN_MAPPING 解析失败', e);
-    return [];
-  }
 }
+
 // 用户配置区域结束 =================================
 
 // 闪电 SVG
@@ -416,7 +444,8 @@ async function handleToken(realm, service, scope, env, targetUrl, tokenMapping) 
 async function handleRequest(request, env) {
   const url = new URL(request.url);
   
-  // 解析 token mapping
+  // 获取配置
+  const config = getConfig(env);
   const tokenMapping = parseTokenMapping(env);
   
   // 首页路由
@@ -450,7 +479,7 @@ async function handleRequest(request, env) {
       isDockerRequest = true;
       targetDomain = 'registry-1.docker.io';
       targetPath = pathParts.length === 2 ? `library/${pathParts[1]}` : pathParts.slice(1).join('/');
-    } else if (ALLOWED_HOSTS.includes(pathParts[0])) {
+    } else if (config.ALLOWED_HOSTS.includes(pathParts[0])) {
       targetDomain = pathParts[0];
       targetPath = pathParts.slice(1).join('/') + url.search;
       isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io'].includes(targetDomain);
@@ -464,12 +493,12 @@ async function handleRequest(request, env) {
   }
 
   // 白名单检查
-  if (!ALLOWED_HOSTS.includes(targetDomain)) {
+  if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
     return new Response('Invalid target domain\n', { status: 400 });
   }
 
   // 路径白名单检查
-  if (RESTRICT_PATHS && !ALLOWED_PATHS.some(p => targetPath.toLowerCase().includes(p.toLowerCase()))) {
+  if (config.RESTRICT_PATHS && !config.ALLOWED_PATHS.some(p => targetPath.toLowerCase().includes(p.toLowerCase()))) {
     return new Response('Path not allowed\n', { status: 403 });
   }
 
