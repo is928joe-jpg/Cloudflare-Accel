@@ -5,9 +5,6 @@
 // 用户配置区域开始 =================================
 // 从环境变量读取配置，如果没有则使用默认值
 function getConfig(env) {
-  // TOKEN_MAPPING 格式: ["url@ENV_VAR","url2@ENV_VAR2", ...]
-  const TOKEN_MAPPING = env.TOKEN_MAPPING || '[]';
-  
   const ALLOWED_HOSTS = env.ALLOWED_HOSTS || [
     'quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io',
     'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io',
@@ -24,7 +21,6 @@ function getConfig(env) {
   ];
 
   return {
-    TOKEN_MAPPING,
     ALLOWED_HOSTS: typeof ALLOWED_HOSTS === 'string' ? JSON.parse(ALLOWED_HOSTS) : ALLOWED_HOSTS,
     RESTRICT_PATHS: typeof RESTRICT_PATHS === 'string' ? RESTRICT_PATHS === 'true' : RESTRICT_PATHS,
     ALLOWED_PATHS: typeof ALLOWED_PATHS === 'string' ? JSON.parse(ALLOWED_PATHS) : ALLOWED_PATHS
@@ -42,19 +38,17 @@ function getConfig(env) {
 // 方式3：混合分隔
 // https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1,
 // https://api.github.com/repos/private-org@REPO_TOKEN_2
- 
 function parseTokenMapping(env) {
   const mappingStr = env.TOKEN_MAPPING || '';
   return mappingStr
-    .split(/[\n,]/)      // 按换行或逗号分割
-    .map(s => s.trim())  // 去掉首尾空格
-    .filter(Boolean)     // 忽略空行
+    .split(/[\n,]/)               // 按换行或逗号分割
+    .map(s => s.trim())           // 去掉空格
+    .filter(Boolean)              // 忽略空行
     .map(item => {
       const [url, env_var] = item.split('@');
-      return { url, env_var };
+      return { url: url.trim(), env_var: env_var.trim() };
     });
 }
-
 // 用户配置区域结束 =================================
 
 // 闪电 SVG
