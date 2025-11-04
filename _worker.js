@@ -5,50 +5,72 @@
 // 用户配置区域开始 =================================
 // 从环境变量读取配置，如果没有则使用默认值
 function getConfig(env) {
-  const ALLOWED_HOSTS = env.ALLOWED_HOSTS || [
-    'quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io',
-    'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io',
-    'github.com', 'api.github.com', 'raw.githubusercontent.com',
-    'gist.github.com', 'gist.githubusercontent.com'
-  ];
+    // 解析逗号或换行分隔的字符串为数组，自动处理引号和空格
+    function parseStringToArray(str, defaultArray) {
+        if (typeof str === 'string') {
+            // 先尝试 JSON 解析
+            try {
+                if (str.trim().startsWith('[')) {
+                    const parsed = JSON.parse(str);
+                    if (Array.isArray(parsed)) {
+                        return parsed.map(item => String(item).trim()).filter(Boolean);
+                    }
+                }
+            } catch (e) {
+                // JSON 解析失败，继续使用字符串分割
+            }
 
-  const RESTRICT_PATHS = env.RESTRICT_PATHS || false;
-  
-  const ALLOWED_PATHS = env.ALLOWED_PATHS || [
-    'library',   // Docker Hub 官方镜像仓库的命名空间
-    'user-id-1',
-    'user-id-2'
-  ];
+            // 字符串分割方式
+            return str
+                .split(/[\n,]/)               // 按换行或逗号分割
+                .map(s => s.trim())           // 去掉空格
+                .map(s => s.replace(/^['"`'']+|\s*['"`'']+$/g, '')) // 去掉首尾的所有类型引号
+                .map(s => s.trim())           // 再次去掉空格
+                .filter(Boolean);             // 忽略空行
+        }
+        return defaultArray;
+    }
 
-  return {
-    ALLOWED_HOSTS: typeof ALLOWED_HOSTS === 'string' ? JSON.parse(ALLOWED_HOSTS) : ALLOWED_HOSTS,
-    RESTRICT_PATHS: typeof RESTRICT_PATHS === 'string' ? RESTRICT_PATHS === 'true' : RESTRICT_PATHS,
-    ALLOWED_PATHS: typeof ALLOWED_PATHS === 'string' ? JSON.parse(ALLOWED_PATHS) : ALLOWED_PATHS
-  };
+    // 默认值
+    const defaultAllowedHosts = [
+        'quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io',
+        'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io',
+        'github.com', 'api.github.com', 'raw.githubusercontent.com',
+        'gist.github.com', 'gist.githubusercontent.com'
+    ];
+
+    const defaultAllowedPaths = [
+        'library',   // Docker Hub 官方镜像仓库的命名空间
+        'user-id-1',
+        'user-id-2'
+    ];
+
+    return {
+        ALLOWED_HOSTS: parseStringToArray(env.ALLOWED_HOSTS, defaultAllowedHosts),
+        RESTRICT_PATHS: typeof env.RESTRICT_PATHS === 'string' ? env.RESTRICT_PATHS === 'true' : (env.RESTRICT_PATHS || false),
+        ALLOWED_PATHS: parseStringToArray(env.ALLOWED_PATHS, defaultAllowedPaths)
+    };
 }
 
-// TOKEN_MAPPING 改为 JSON 字符串形式，一次性读取,CF 面板中格式
-// 方式1：逗号分隔（单行）
-// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1,https://api.github.com/repos/private-org@REPO_TOKEN_2
-
-// 方式2：换行分隔（多行）
-// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1
-// https://api.github.com/repos/private-org@REPO_TOKEN_2
-
-// 方式3：混合分隔
-// https://raw.githubusercontent.com/is928joe-jpg@REPO_TOKEN_1,
-// https://api.github.com/repos/private-org@REPO_TOKEN_2
+// TOKEN_MAPPING 解析 - 支持逗号或换行分隔，自动处理引号
 function parseTokenMapping(env) {
-  const mappingStr = env.TOKEN_MAPPING || '';
-  return mappingStr
-    .split(/[\n,]/)               // 按换行或逗号分割
-    .map(s => s.trim())           // 去掉空格
-    .filter(Boolean)              // 忽略空行
-    .map(item => {
-      const [url, env_var] = item.split('@');
-      return { url: url.trim(), env_var: env_var.trim() };
-    });
+    const mappingStr = env.TOKEN_MAPPING || '';
+    return mappingStr
+        .split(/[\n,]/)               // 按换行或逗号分割
+        .map(s => s.trim())           // 去掉空格
+        .map(s => s.replace(/^['"`]|['"`]$/g, '')) // 去掉首尾的引号
+        .map(s => s.replace(/^['"`]|['"`]$/g, '')) // 去掉中文引号
+        .filter(Boolean)              // 忽略空行
+        .map(item => {
+            const [url, env_var] = item.split('@');
+            return {
+                url: url ? url.trim() : '',
+                env_var: env_var ? env_var.trim() : ''
+            };
+        })
+        .filter(item => item.url && item.env_var); // 确保格式正确
 }
+
 // 用户配置区域结束 =================================
 
 // 闪电 SVG
@@ -412,203 +434,209 @@ const HOMEPAGE_HTML = `<!DOCTYPE html>
 
 // 获取私有 token
 function getPrivateToken(targetUrl, env, tokenMapping) {
-  const matched = tokenMapping.find(cfg => targetUrl.startsWith(cfg.url));
-  if (matched && env[matched.env_var]) return env[matched.env_var];
-  return null;
+    const matched = tokenMapping.find(cfg => targetUrl.startsWith(cfg.url));
+    if (matched && env[matched.env_var]) return env[matched.env_var];
+    return null;
 }
 
 function isAmazonS3(url) {
-  try { return new URL(url).hostname.includes('amazonaws.com'); } catch { return false; }
+    try {
+        return new URL(url).hostname.includes('amazonaws.com');
+    } catch {
+        return false;
+    }
 }
 
 function getEmptyBodySHA256() {
-  return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+    return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 }
 
 async function handleToken(realm, service, scope, env, targetUrl, tokenMapping) {
-  const privateToken = getPrivateToken(targetUrl, env, tokenMapping);
-  if (privateToken) return privateToken;
-  try {
-    const resp = await fetch(`${realm}?service=${service}&scope=${scope}`, { headers: { Accept: 'application/json' } });
-    const data = await resp.json();
-    return data.token || data.access_token || null;
-  } catch { return null; }
+    const privateToken = getPrivateToken(targetUrl, env, tokenMapping);
+    if (privateToken) return privateToken;
+    try {
+        const resp = await fetch(`${realm}?service=${service}&scope=${scope}`, {headers: {Accept: 'application/json'}});
+        const data = await resp.json();
+        return data.token || data.access_token || null;
+    } catch {
+        return null;
+    }
 }
 
 async function handleRequest(request, env) {
-  const url = new URL(request.url);
-  
-  // 获取配置
-  const config = getConfig(env);
-  const tokenMapping = parseTokenMapping(env);
-  
-  // 首页路由
-  if (url.pathname === '/' || url.pathname === '') {
-    return new Response(HOMEPAGE_HTML, {
-      status: 200,
-      headers: { 'Content-Type': 'text/html' }
-    });
-  }
+    const url = new URL(request.url);
 
-  let path = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
-  let pathParts = path.split('/').filter(Boolean);
-  
-  // 处理空路径情况
-  if (pathParts.length === 0) {
-    return new Response('Invalid request path\n', { status: 400 });
-  }
+    // 获取配置
+    const config = getConfig(env);
+    const tokenMapping = parseTokenMapping(env);
 
-  let targetDomain, targetPath, isDockerRequest = false;
-
-  // 检查是否是完整 URL 格式
-  if (path.startsWith('https://') || path.startsWith('http://')) {
-    const u = new URL(path);
-    targetDomain = u.hostname;
-    targetPath = u.pathname.substring(1) + u.search;
-    isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io', 'docker.io'].includes(targetDomain);
-    if (targetDomain === 'docker.io') targetDomain = 'registry-1.docker.io';
-  } else {
-    // 处理 Docker 镜像路径
-    if (pathParts[0] === 'docker.io') {
-      isDockerRequest = true;
-      targetDomain = 'registry-1.docker.io';
-      targetPath = pathParts.length === 2 ? `library/${pathParts[1]}` : pathParts.slice(1).join('/');
-    } else if (config.ALLOWED_HOSTS.includes(pathParts[0])) {
-      targetDomain = pathParts[0];
-      targetPath = pathParts.slice(1).join('/') + url.search;
-      isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io'].includes(targetDomain);
-    } else {
-      // 默认处理为 Docker Hub 镜像
-      isDockerRequest = true;
-      targetDomain = 'registry-1.docker.io';
-      // 智能处理镜像路径：单段为 library/xxx，多段为 user/repo
-      targetPath = pathParts.length === 1 ? `library/${pathParts[0]}` : pathParts.join('/');
+    // 首页路由
+    if (url.pathname === '/' || url.pathname === '') {
+        return new Response(HOMEPAGE_HTML, {
+            status: 200,
+            headers: {'Content-Type': 'text/html'}
+        });
     }
-  }
 
-  // 白名单检查
-  if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
-    return new Response('Invalid target domain\n', { status: 400 });
-  }
+    let path = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
+    let pathParts = path.split('/').filter(Boolean);
 
-  // 路径白名单检查
-  if (config.RESTRICT_PATHS && !config.ALLOWED_PATHS.some(p => targetPath.toLowerCase().includes(p.toLowerCase()))) {
-    return new Response('Path not allowed\n', { status: 403 });
-  }
-
-  // 构建目标 URL - 修复 V2 API 路径问题
-  let targetUrl;
-  if (isDockerRequest) {
-    // 对于 Docker 请求，确保使用 /v2/ API
-    if (!targetPath.startsWith('v2/')) {
-      targetUrl = `https://${targetDomain}/v2/${targetPath}`;
-    } else {
-      targetUrl = `https://${targetDomain}/${targetPath}`;
+    // 处理空路径情况
+    if (pathParts.length === 0) {
+        return new Response('Invalid request path\n', {status: 400});
     }
-  } else {
-    targetUrl = `https://${targetDomain}/${targetPath}`;
-  }
 
-  console.log(`Proxying to: ${targetUrl}`);
+    let targetDomain, targetPath, isDockerRequest = false;
 
-  const headers = new Headers(request.headers);
-  headers.set('Host', targetDomain);
-  
-  // 清理可能干扰的头部
-  headers.delete('x-amz-content-sha256');
-  headers.delete('x-amz-date');
-  headers.delete('x-amz-security-token');
-  headers.delete('x-amz-user-agent');
+    // 检查是否是完整 URL 格式
+    if (path.startsWith('https://') || path.startsWith('http://')) {
+        const u = new URL(path);
+        targetDomain = u.hostname;
+        targetPath = u.pathname.substring(1) + u.search;
+        isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io', 'docker.io'].includes(targetDomain);
+        if (targetDomain === 'docker.io') targetDomain = 'registry-1.docker.io';
+    } else {
+        // 处理 Docker 镜像路径
+        if (pathParts[0] === 'docker.io') {
+            isDockerRequest = true;
+            targetDomain = 'registry-1.docker.io';
+            targetPath = pathParts.length === 2 ? `library/${pathParts[1]}` : pathParts.slice(1).join('/');
+        } else if (config.ALLOWED_HOSTS.includes(pathParts[0])) {
+            targetDomain = pathParts[0];
+            targetPath = pathParts.slice(1).join('/') + url.search;
+            isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io'].includes(targetDomain);
+        } else {
+            // 默认处理为 Docker Hub 镜像
+            isDockerRequest = true;
+            targetDomain = 'registry-1.docker.io';
+            // 智能处理镜像路径：单段为 library/xxx，多段为 user/repo
+            targetPath = pathParts.length === 1 ? `library/${pathParts[0]}` : pathParts.join('/');
+        }
+    }
 
-  let response;
-  let redirects = 0;
-  const MAX_REDIRECTS = 5;
-  let currentUrl = targetUrl;
+    // 白名单检查
+    if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
+        return new Response('Invalid target domain\n', {status: 400});
+    }
 
-  try {
-    while (redirects <= MAX_REDIRECTS) {
-      // 为 S3 请求添加必要的头部
-      if (isAmazonS3(currentUrl)) {
-        headers.set('x-amz-content-sha256', getEmptyBodySHA256());
-        headers.set('x-amz-date', new Date().toISOString().replace(/[-:T]/g, '').slice(0, -5) + 'Z');
-      }
+    // 路径白名单检查
+    if (config.RESTRICT_PATHS && !config.ALLOWED_PATHS.some(p => targetPath.toLowerCase().includes(p.toLowerCase()))) {
+        return new Response('Path not allowed\n', {status: 403});
+    }
 
-      response = await fetch(currentUrl, {
-        method: request.method,
-        headers: headers,
-        body: request.body,
-        redirect: 'manual'
-      });
+    // 构建目标 URL - 修复 V2 API 路径问题
+    let targetUrl;
+    if (isDockerRequest) {
+        // 对于 Docker 请求，确保使用 /v2/ API
+        if (!targetPath.startsWith('v2/')) {
+            targetUrl = `https://${targetDomain}/v2/${targetPath}`;
+        } else {
+            targetUrl = `https://${targetDomain}/${targetPath}`;
+        }
+    } else {
+        targetUrl = `https://${targetDomain}/${targetPath}`;
+    }
 
-      console.log(`Response: ${response.status} from ${currentUrl}`);
+    console.log(`Proxying to: ${targetUrl}`);
 
-      // 处理 Docker 认证
-      if (isDockerRequest && response.status === 401) {
-        const wwwAuth = response.headers.get('WWW-Authenticate');
-        if (wwwAuth) {
-          const m = wwwAuth.match(/Bearer realm="([^"]+)",service="([^"]*)",scope="([^"]*)"/);
-          if (m) {
-            const [, realm, service, scope] = m;
-            const token = await handleToken(realm, service || targetDomain, scope, env, currentUrl, tokenMapping);
-            if (token) {
-              headers.set('Authorization', `Bearer ${token}`);
-              // 重试带 token 的请求
-              response = await fetch(currentUrl, {
+    const headers = new Headers(request.headers);
+    headers.set('Host', targetDomain);
+
+    // 清理可能干扰的头部
+    headers.delete('x-amz-content-sha256');
+    headers.delete('x-amz-date');
+    headers.delete('x-amz-security-token');
+    headers.delete('x-amz-user-agent');
+
+    let response;
+    let redirects = 0;
+    const MAX_REDIRECTS = 5;
+    let currentUrl = targetUrl;
+
+    try {
+        while (redirects <= MAX_REDIRECTS) {
+            // 为 S3 请求添加必要的头部
+            if (isAmazonS3(currentUrl)) {
+                headers.set('x-amz-content-sha256', getEmptyBodySHA256());
+                headers.set('x-amz-date', new Date().toISOString().replace(/[-:T]/g, '').slice(0, -5) + 'Z');
+            }
+
+            response = await fetch(currentUrl, {
                 method: request.method,
                 headers: headers,
                 body: request.body,
                 redirect: 'manual'
-              });
-              console.log(`Token response: ${response.status}`);
+            });
+
+            console.log(`Response: ${response.status} from ${currentUrl}`);
+
+            // 处理 Docker 认证
+            if (isDockerRequest && response.status === 401) {
+                const wwwAuth = response.headers.get('WWW-Authenticate');
+                if (wwwAuth) {
+                    const m = wwwAuth.match(/Bearer realm="([^"]+)",service="([^"]*)",scope="([^"]*)"/);
+                    if (m) {
+                        const [, realm, service, scope] = m;
+                        const token = await handleToken(realm, service || targetDomain, scope, env, currentUrl, tokenMapping);
+                        if (token) {
+                            headers.set('Authorization', `Bearer ${token}`);
+                            // 重试带 token 的请求
+                            response = await fetch(currentUrl, {
+                                method: request.method,
+                                headers: headers,
+                                body: request.body,
+                                redirect: 'manual'
+                            });
+                            console.log(`Token response: ${response.status}`);
+                        }
+                    }
+                }
             }
-          }
+
+            // 检查重定向
+            if ((response.status === 302 || response.status === 307) && response.headers.get('Location')) {
+                const redirectUrl = response.headers.get('Location');
+                console.log(`Redirect ${redirects + 1}/${MAX_REDIRECTS}: ${redirectUrl}`);
+
+                // 防止重定向到自身
+                if (redirectUrl.includes(url.hostname)) {
+                    console.log('Blocked self-redirect');
+                    break;
+                }
+
+                currentUrl = redirectUrl;
+                redirects++;
+                continue;
+            }
+
+            // 不是重定向，退出循环
+            break;
         }
-      }
 
-      // 检查重定向
-      if ((response.status === 302 || response.status === 307) && response.headers.get('Location')) {
-        const redirectUrl = response.headers.get('Location');
-        console.log(`Redirect ${redirects + 1}/${MAX_REDIRECTS}: ${redirectUrl}`);
-        
-        // 防止重定向到自身
-        if (redirectUrl.includes(url.hostname)) {
-          console.log('Blocked self-redirect');
-          break;
+        // 检查是否超过最大重定向次数
+        if (redirects > MAX_REDIRECTS) {
+            return new Response(`Too many redirects (${redirects})\n`, {status: 508});
         }
-        
-        currentUrl = redirectUrl;
-        redirects++;
-        continue;
-      }
 
-      // 不是重定向，退出循环
-      break;
+        // 构建最终响应
+        const finalResponse = new Response(response.body, response);
+        finalResponse.headers.set('Access-Control-Allow-Origin', '*');
+        finalResponse.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
+
+        if (isDockerRequest) {
+            finalResponse.headers.set('Docker-Distribution-API-Version', 'registry/2.0');
+        }
+
+        return finalResponse;
+
+    } catch (error) {
+        console.log(`Fetch error: ${error.message}`);
+        return new Response(`Error fetching from ${targetDomain}: ${error.message}\n`, {status: 500});
     }
-
-    // 检查是否超过最大重定向次数
-    if (redirects > MAX_REDIRECTS) {
-      return new Response(`Too many redirects (${redirects})\n`, { status: 508 });
-    }
-
-    // 构建最终响应
-    const finalResponse = new Response(response.body, response);
-    finalResponse.headers.set('Access-Control-Allow-Origin', '*');
-    finalResponse.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
-    
-    if (isDockerRequest) {
-      finalResponse.headers.set('Docker-Distribution-API-Version', 'registry/2.0');
-    }
-
-    return finalResponse;
-
-  } catch (error) {
-    console.log(`Fetch error: ${error.message}`);
-    return new Response(`Error fetching from ${targetDomain}: ${error.message}\n`, { status: 500 });
-  }
 }
 
 export default {
-  async fetch(request, env, ctx) {
-    return handleRequest(request, env);
-  }
+    async fetch(request, env, ctx) {
+        return handleRequest(request, env);
+    }
 };
