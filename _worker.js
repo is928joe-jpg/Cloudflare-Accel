@@ -1,108 +1,86 @@
-// 用户配置区域开始 =================================
+var __defProp = Object.defineProperty;
+var __name = (target, value) => __defProp(target, "name", { value, configurable: true });
+
+// _worker.js
 function getConfig(env) {
   function parseStringToArray(str, defaultArray) {
-      if (typeof str === 'string') {
-          try {
-              if (str.trim().startsWith('[')) {
-                  const parsed = JSON.parse(str);
-                  if (Array.isArray(parsed)) {
-                      return parsed.map(item => String(item).trim()).filter(Boolean);
-                  }
-              }
-          } catch (e) {
-              // JSON 解析失败，继续使用字符串分割
+    if (typeof str === "string") {
+      try {
+        if (str.trim().startsWith("[")) {
+          const parsed = JSON.parse(str);
+          if (Array.isArray(parsed)) {
+            return parsed.map((item) => String(item).trim()).filter(Boolean);
           }
-
-          return str
-              .split(/[\n,]/)
-              .map(s => s.trim())
-              .map(s => s.replace(/^['"`'']+|\s*['"`'']+$/g, ''))
-              .map(s => s.trim())
-              .filter(Boolean);
+        }
+      } catch (e) {
       }
-      return defaultArray;
+      return str.split(/[\n,]/).map((s) => s.trim()).map((s) => s.replace(/^['"`'']+|\s*['"`'']+$/g, "")).map((s) => s.trim()).filter(Boolean);
+    }
+    return defaultArray;
   }
-
+  __name(parseStringToArray, "parseStringToArray");
   const defaultAllowedHosts = [
-  'quay.io',
-  'gcr.io',
-  'k8s.gcr.io',
-  'registry.k8s.io',
-  'ghcr.io',
-  'docker.cloudsmith.io',
-  'registry-1.docker.io',
-  'github.com',
-  'api.github.com',
-  'raw.githubusercontent.com',
-  'gist.github.com',
-  'gist.githubusercontent.com'
+    "quay.io",
+    "gcr.io",
+    "k8s.gcr.io",
+    "registry.k8s.io",
+    "ghcr.io",
+    "docker.cloudsmith.io",
+    "registry-1.docker.io",
+    "github.com",
+    "api.github.com",
+    "raw.githubusercontent.com",
+    "gist.github.com",
+    "gist.githubusercontent.com"
   ];
-  
   const defaultAllowedPaths = [
-      'library',
-      'user-id-1',
-      'user-id-2'
+    "library",
+    "user-id-1",
+    "user-id-2"
   ];
-
   return {
-      ALLOWED_HOSTS: parseStringToArray(env.ALLOWED_HOSTS, defaultAllowedHosts),
-      RESTRICT_PATHS: typeof env.RESTRICT_PATHS === 'string' ? env.RESTRICT_PATHS === 'true' : (env.RESTRICT_PATHS || false),
-      ALLOWED_PATHS: parseStringToArray(env.ALLOWED_PATHS, defaultAllowedPaths)
+    ALLOWED_HOSTS: parseStringToArray(env.ALLOWED_HOSTS, defaultAllowedHosts),
+    RESTRICT_PATHS: typeof env.RESTRICT_PATHS === "string" ? env.RESTRICT_PATHS === "true" : env.RESTRICT_PATHS || false,
+    ALLOWED_PATHS: parseStringToArray(env.ALLOWED_PATHS, defaultAllowedPaths)
   };
 }
-
+__name(getConfig, "getConfig");
 function parseTokenMapping(env) {
-  let mappingStr = env.TOKEN_MAPPING || '';
-  
-  if (!mappingStr || mappingStr.trim() === '') {
-      return [];
+  let mappingStr = env.TOKEN_MAPPING || "";
+  if (!mappingStr || mappingStr.trim() === "") {
+    return [];
   }
-
   try {
-      return mappingStr
-          .split(/[\n,]/)
-          .map(s => s.trim())
-          .map(s => s.replace(/^['"`'']+|\s*['"`'']+$/g, ''))
-          .map(s => s.trim())
-          .filter(Boolean)
-          .map(item => {
-              const [url, tokenOrEnvVar] = item.split('@');
-              let env_var, directToken;
-
-              if (tokenOrEnvVar && tokenOrEnvVar.startsWith('ghp_')) {
-                  directToken = tokenOrEnvVar.trim();
-                  env_var = null;
-              } else {
-                  env_var = tokenOrEnvVar ? tokenOrEnvVar.trim() : '';
-                  directToken = null;
-              }
-
-              return {
-                  url: url ? url.trim() : '',
-                  env_var,
-                  directToken
-              };
-          })
-          .filter(item => item.url && (item.env_var || item.directToken));
+    return mappingStr.split(/[\n,]/).map((s) => s.trim()).map((s) => s.replace(/^['"`'']+|\s*['"`'']+$/g, "")).map((s) => s.trim()).filter(Boolean).map((item) => {
+      const [url, tokenOrEnvVar] = item.split("@");
+      let env_var, directToken;
+      if (tokenOrEnvVar && tokenOrEnvVar.startsWith("ghp_")) {
+        directToken = tokenOrEnvVar.trim();
+        env_var = null;
+      } else {
+        env_var = tokenOrEnvVar ? tokenOrEnvVar.trim() : "";
+        directToken = null;
+      }
+      return {
+        url: url ? url.trim() : "",
+        env_var,
+        directToken
+      };
+    }).filter((item) => item.url && (item.env_var || item.directToken));
   } catch (error) {
-      return [];
+    return [];
   }
 }
-
-// 用户配置区域结束 =================================
-
-// 首页 HTML（简化版）
-// 闪电 SVG（需要添加回来）
-const LIGHTNING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>`;
-
-const HOMEPAGE_HTML = `<!DOCTYPE html>
+__name(parseTokenMapping, "parseTokenMapping");
+var LIGHTNING_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#FBBF24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"></path></svg>`;
+var HOMEPAGE_HTML = `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Cloudflare 加速</title>
+<title>Cloudflare \u52A0\u901F</title>
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,${encodeURIComponent(LIGHTNING_SVG)}">
-<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.tailwindcss.com"><\/script>
 <style>
 body {
   min-height: 100vh;
@@ -243,58 +221,58 @@ input[type="text"] {
 </head>
 <body class="light-mode">
 <button onclick="toggleTheme()" class="theme-toggle bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-200 rounded-full hover:bg-gray-300 dark:hover:bg-gray-600 transition">
-<span class="sun">☀️</span>
-<span class="moon hidden">🌙</span>
+<span class="sun">\u2600\uFE0F</span>
+<span class="moon hidden">\u{1F319}</span>
 </button>
 <div class="container mx-auto">
-<h1 class="text-3xl font-bold text-center mb-8">Cloudflare 加速下载</h1>
+<h1 class="text-3xl font-bold text-center mb-8">Cloudflare \u52A0\u901F\u4E0B\u8F7D</h1>
 
-<!-- GitHub 链接转换 -->
+<!-- GitHub \u94FE\u63A5\u8F6C\u6362 -->
 <div class="section-box">
-  <h2 class="text-xl font-semibold mb-2">⚡ GitHub 文件加速</h2>
-  <p class="text-gray-600 dark:text-gray-300 mb-4">输入 GitHub 文件链接，自动转换为加速链接。也可以直接在链接前加上本站域名使用。</p>
+  <h2 class="text-xl font-semibold mb-2">\u26A1 GitHub \u6587\u4EF6\u52A0\u901F</h2>
+  <p class="text-gray-600 dark:text-gray-300 mb-4">\u8F93\u5165 GitHub \u6587\u4EF6\u94FE\u63A5\uFF0C\u81EA\u52A8\u8F6C\u6362\u4E3A\u52A0\u901F\u94FE\u63A5\u3002\u4E5F\u53EF\u4EE5\u76F4\u63A5\u5728\u94FE\u63A5\u524D\u52A0\u4E0A\u672C\u7AD9\u57DF\u540D\u4F7F\u7528\u3002</p>
   <div class="flex gap-2 mb-2">
     <input
       id="github-url"
       type="text"
-      placeholder="请输入 GitHub 文件链接，例如：https://github.com/user/repo/releases/..."
+      placeholder="\u8BF7\u8F93\u5165 GitHub \u6587\u4EF6\u94FE\u63A5\uFF0C\u4F8B\u5982\uFF1Ahttps://github.com/user/repo/releases/..."
       class="flex-grow p-2 border border-gray-400 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
     >
     <button
       onclick="convertGithubUrl()"
       class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
     >
-      获取加速链接
+      \u83B7\u53D6\u52A0\u901F\u94FE\u63A5
     </button>
   </div>
   <p id="github-result" class="mt-2 text-green-600 dark:text-green-400 result-text hidden"></p>
   <div id="github-buttons" class="flex gap-2 mt-2 github-buttons hidden">
-    <button onclick="copyGithubUrl()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">📋 复制链接</button>
-    <button onclick="openGithubUrl()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">🔗 打开链接</button>
+    <button onclick="copyGithubUrl()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">\u{1F4CB} \u590D\u5236\u94FE\u63A5</button>
+    <button onclick="openGithubUrl()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">\u{1F517} \u6253\u5F00\u94FE\u63A5</button>
   </div>
 </div>
 
-<!-- Docker 镜像加速 -->
+<!-- Docker \u955C\u50CF\u52A0\u901F -->
 <div class="section-box">
-  <h2 class="text-xl font-semibold mb-2">🐳 Docker 镜像加速</h2>
-  <p class="text-gray-600 dark:text-gray-300 mb-4">输入原镜像地址（如 hello-world 或 ghcr.io/user/repo），获取加速拉取命令。</p>
+  <h2 class="text-xl font-semibold mb-2">\u{1F433} Docker \u955C\u50CF\u52A0\u901F</h2>
+  <p class="text-gray-600 dark:text-gray-300 mb-4">\u8F93\u5165\u539F\u955C\u50CF\u5730\u5740\uFF08\u5982 hello-world \u6216 ghcr.io/user/repo\uFF09\uFF0C\u83B7\u53D6\u52A0\u901F\u62C9\u53D6\u547D\u4EE4\u3002</p>
   <div class="flex gap-2 mb-2">
     <input
       id="docker-image"
       type="text"
-      placeholder="请输入镜像地址，例如：hello-world 或 ghcr.io/user/repo"
+      placeholder="\u8BF7\u8F93\u5165\u955C\u50CF\u5730\u5740\uFF0C\u4F8B\u5982\uFF1Ahello-world \u6216 ghcr.io/user/repo"
       class="flex-grow p-2 border border-gray-400 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-gray-700 text-gray-900 dark:text-white placeholder-gray-400 dark:placeholder-gray-500"
     >
     <button
       onclick="convertDockerImage()"
       class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition"
     >
-      获取加速命令
+      \u83B7\u53D6\u52A0\u901F\u547D\u4EE4
     </button>
   </div>
   <p id="docker-result" class="mt-2 text-green-600 dark:text-green-400 result-text hidden"></p>
   <div id="docker-buttons" class="flex gap-2 mt-2 docker-buttons hidden">
-    <button onclick="copyDockerCommand()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">📋 复制命令</button>
+    <button onclick="copyDockerCommand()" class="bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 px-3 py-1 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-500 transition w-full">\u{1F4CB} \u590D\u5236\u547D\u4EE4</button>
   </div>
 </div>
 
@@ -306,10 +284,10 @@ input[type="text"] {
 <div id="toast" class="toast"></div>
 
 <script>
-// 动态获取当前域名
+// \u52A8\u6001\u83B7\u53D6\u5F53\u524D\u57DF\u540D
 const currentDomain = window.location.hostname;
 
-// 主题切换
+// \u4E3B\u9898\u5207\u6362
 function toggleTheme() {
   const body = document.body;
   const sun = document.querySelector('.sun');
@@ -329,12 +307,12 @@ function toggleTheme() {
   }
 }
 
-// 初始化主题
+// \u521D\u59CB\u5316\u4E3B\u9898
 if (localStorage.getItem('theme') === 'dark') {
   toggleTheme();
 }
 
-// 显示弹窗提示
+// \u663E\u793A\u5F39\u7A97\u63D0\u793A
 function showToast(message, isError = false) {
   const toast = document.getElementById('toast');
   toast.textContent = message;
@@ -346,7 +324,7 @@ function showToast(message, isError = false) {
   }, 3000);
 }
 
-// 复制文本的通用函数
+// \u590D\u5236\u6587\u672C\u7684\u901A\u7528\u51FD\u6570
 function copyToClipboard(text) {
   if (navigator.clipboard && window.isSecureContext) {
     return navigator.clipboard.writeText(text).catch(err => {
@@ -370,20 +348,20 @@ function copyToClipboard(text) {
   }
 }
 
-// GitHub 链接转换
+// GitHub \u94FE\u63A5\u8F6C\u6362
 let githubAcceleratedUrl = '';
 function convertGithubUrl() {
   const input = document.getElementById('github-url').value.trim();
   const result = document.getElementById('github-result');
   const buttons = document.getElementById('github-buttons');
   if (!input) {
-    showToast('请输入有效的 GitHub 链接', true);
+    showToast('\u8BF7\u8F93\u5165\u6709\u6548\u7684 GitHub \u94FE\u63A5', true);
     result.classList.add('hidden');
     buttons.classList.add('hidden');
     return;
   }
   if (!input.startsWith('https://')) {
-    showToast('链接必须以 https:// 开头', true);
+    showToast('\u94FE\u63A5\u5FC5\u987B\u4EE5 https:// \u5F00\u5934', true);
     result.classList.add('hidden');
     buttons.classList.add('hidden');
     return;
@@ -391,21 +369,21 @@ function convertGithubUrl() {
 
   const urlWithoutProtocol = input.substring(8);
   githubAcceleratedUrl = 'https://' + currentDomain + '/' + urlWithoutProtocol;
-  result.textContent = '加速链接: ' + githubAcceleratedUrl;
+  result.textContent = '\u52A0\u901F\u94FE\u63A5: ' + githubAcceleratedUrl;
   result.classList.remove('hidden');
   buttons.classList.remove('hidden');
   copyToClipboard(githubAcceleratedUrl).then(() => {
-    showToast('已复制到剪贴板');
+    showToast('\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F');
   }).catch(err => {
-    showToast('复制失败: ' + err.message, true);
+    showToast('\u590D\u5236\u5931\u8D25: ' + err.message, true);
   });
 }
 
 function copyGithubUrl() {
   copyToClipboard(githubAcceleratedUrl).then(() => {
-    showToast('已手动复制到剪贴板');
+    showToast('\u5DF2\u624B\u52A8\u590D\u5236\u5230\u526A\u8D34\u677F');
   }).catch(err => {
-    showToast('手动复制失败: ' + err.message, true);
+    showToast('\u624B\u52A8\u590D\u5236\u5931\u8D25: ' + err.message, true);
   });
 }
 
@@ -413,371 +391,307 @@ function openGithubUrl() {
   window.open(githubAcceleratedUrl, '_blank');
 }
 
-// Docker 镜像转换
+// Docker \u955C\u50CF\u8F6C\u6362
 let dockerCommand = '';
 function convertDockerImage() {
   const input = document.getElementById('docker-image').value.trim();
   const result = document.getElementById('docker-result');
   const buttons = document.getElementById('docker-buttons');
   if (!input) {
-    showToast('请输入有效的镜像地址', true);
+    showToast('\u8BF7\u8F93\u5165\u6709\u6548\u7684\u955C\u50CF\u5730\u5740', true);
     result.classList.add('hidden');
     buttons.classList.add('hidden');
     return;
   }
   dockerCommand = 'docker pull ' + currentDomain + '/' + input;
-  result.textContent = '加速命令: ' + dockerCommand;
+  result.textContent = '\u52A0\u901F\u547D\u4EE4: ' + dockerCommand;
   result.classList.remove('hidden');
   buttons.classList.remove('hidden');
   copyToClipboard(dockerCommand).then(() => {
-    showToast('已复制到剪贴板');
+    showToast('\u5DF2\u590D\u5236\u5230\u526A\u8D34\u677F');
   }).catch(err => {
-    showToast('复制失败: ' + err.message, true);
+    showToast('\u590D\u5236\u5931\u8D25: ' + err.message, true);
   });
 }
 
 function copyDockerCommand() {
   copyToClipboard(dockerCommand).then(() => {
-    showToast('已手动复制到剪贴板');
+    showToast('\u5DF2\u624B\u52A8\u590D\u5236\u5230\u526A\u8D34\u677F');
   }).catch(err => {
-    showToast('手动复制失败: ' + err.message, true);
+    showToast('\u624B\u52A8\u590D\u5236\u5931\u8D25: ' + err.message, true);
   });
 }
-</script>
+<\/script>
 </body>
 </html>`;
-
-
-// 获取私有 token
 function getPrivateToken(targetUrl, env, tokenMapping) {
-  const matched = tokenMapping.find(cfg => {
-      const matches = targetUrl.startsWith(cfg.url);
-      return matches;
+  const matched = tokenMapping.find((cfg) => {
+    const matches = targetUrl.startsWith(cfg.url);
+    return matches;
   });
-
   if (matched) {
-      if (matched.directToken) {
-          return matched.directToken;
-      } else if (matched.env_var && env[matched.env_var]) {
-          return env[matched.env_var];
-      } else {
-      }
+    if (matched.directToken) {
+      return matched.directToken;
+    } else if (matched.env_var && env[matched.env_var]) {
+      return env[matched.env_var];
+    } else {
+    }
   }
   return null;
 }
-
+__name(getPrivateToken, "getPrivateToken");
 function isAmazonS3(url) {
   try {
-      return new URL(url).hostname.includes('amazonaws.com');
+    return new URL(url).hostname.includes("amazonaws.com");
   } catch {
-      return false;
+    return false;
   }
 }
-
+__name(isAmazonS3, "isAmazonS3");
 function getEmptyBodySHA256() {
-  return 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
+  return "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
 }
-
+__name(getEmptyBodySHA256, "getEmptyBodySHA256");
 async function handleToken(realm, service, scope, env, targetUrl, tokenMapping) {
   const privateToken = getPrivateToken(targetUrl, env, tokenMapping);
   if (privateToken) return privateToken;
   try {
-      const resp = await fetch(`${realm}?service=${service}&scope=${scope}`, {headers: {Accept: 'application/json'}});
-      const data = await resp.json();
-      return data.token || data.access_token || null;
+    const resp = await fetch(`${realm}?service=${service}&scope=${scope}`, { headers: { Accept: "application/json" } });
+    const data = await resp.json();
+    return data.token || data.access_token || null;
   } catch {
-      return null;
+    return null;
   }
 }
-
+__name(handleToken, "handleToken");
 async function handleRequest(request, env) {
   const url = new URL(request.url);
-
-  // 获取配置
   const config = getConfig(env);
   const tokenMapping = parseTokenMapping(env);
-
-  // 首页路由
-  if (url.pathname === '/' || url.pathname === '') {
-      return new Response(HOMEPAGE_HTML, {
-          status: 200,
-          headers: {'Content-Type': 'text/html'}
-      });
+  if (url.pathname === "/" || url.pathname === "") {
+    return new Response(HOMEPAGE_HTML, {
+      status: 200,
+      headers: { "Content-Type": "text/html" }
+    });
   }
-
-  // 调试端点
-  if (url.pathname === '/debug') {
-      const testUrl = 'https://raw.githubusercontent.com/Joe9513j/scripts/main/inst_argo.sh';
-      const privateToken = getPrivateToken(testUrl, env, tokenMapping);
-
-      return new Response(JSON.stringify({
-          testUrl,
-          hasToken: !!privateToken,
-          tokenMapping,
-          allowedHosts: config.ALLOWED_HOSTS,
-          envKeys: Object.keys(env),
-          tokenMappingRaw: env.TOKEN_MAPPING
-      }, null, 2), {
-          headers: {'Content-Type': 'application/json'}
-      });
+  if (url.pathname === "/debug") {
+    const testUrl = "https://raw.githubusercontent.com/Joe9513j/scripts/main/inst_argo.sh";
+    const privateToken2 = getPrivateToken(testUrl, env, tokenMapping);
+    return new Response(JSON.stringify({
+      // testUrl,
+      hasToken: !!privateToken2,
+      // tokenMapping,
+      allowedHosts: config.ALLOWED_HOSTS,
+      envKeys: Object.keys(env),
+      // tokenMappingRaw: env.TOKEN_MAPPING
+    }, null, 2), {
+      headers: { "Content-Type": "application/json" }
+    });
   }
-
-  let path = url.pathname.startsWith('/') ? url.pathname.substring(1) : url.pathname;
+  let path = url.pathname.startsWith("/") ? url.pathname.substring(1) : url.pathname;
   let targetDomain, targetPath, isDockerRequest = false;
-
-  // 处理空路径情况
   if (!path) {
-      return new Response('Invalid request path\n', {status: 400});
+    return new Response("Invalid request path\n", { status: 400 });
   }
-
-  // 检查是否是完整 URL 格式
-  if (path.startsWith('https://') || path.startsWith('http://')) {
-      try {
-          const u = new URL(path);
-          targetDomain = u.hostname;
-          targetPath = u.pathname.substring(1) + u.search;
-
-          // 白名单检查
-          if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
-              return new Response(`Invalid target domain: ${targetDomain}\n`, {status: 400});
-          }
-
-          isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io', 'docker.io'].includes(targetDomain);
-          if (targetDomain === 'docker.io') targetDomain = 'registry-1.docker.io';
-
-      } catch (error) {
-          return new Response(`Invalid URL format: ${path}\n`, {status: 400});
-      }
-  } else {
-      // 普通路径模式
-      const pathParts = path.split('/').filter(Boolean);
-
-      if (pathParts.length === 0) {
-          return new Response('Invalid request path\n', {status: 400});
-      }
-
-      targetDomain = pathParts[0];
-
-      // 白名单检查
+  if (path.startsWith("https://") || path.startsWith("http://")) {
+    try {
+      const u = new URL(path);
+      targetDomain = u.hostname;
+      targetPath = u.pathname.substring(1) + u.search;
       if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
-          const isPotentialDockerImage = !targetDomain.includes('.') && !targetDomain.includes(':');
-
-          if (isPotentialDockerImage) {
-              isDockerRequest = true;
-              targetDomain = 'registry-1.docker.io';
-              targetPath = pathParts.length === 1 ? `library/${pathParts[0]}` : pathParts.join('/');
-          } else {
-              return new Response(`Invalid target domain: ${targetDomain}\n`, {status: 400});
-          }
-      } else {
-          targetPath = pathParts.slice(1).join('/') + url.search;
-
-          if (pathParts[0] === 'docker.io') {
-              isDockerRequest = true;
-              targetDomain = 'registry-1.docker.io';
-              targetPath = pathParts.length === 2 ? `library/${pathParts[1]}` : pathParts.slice(1).join('/');
-          } else {
-              isDockerRequest = ['quay.io', 'gcr.io', 'k8s.gcr.io', 'registry.k8s.io', 'ghcr.io', 'docker.cloudsmith.io', 'registry-1.docker.io'].includes(targetDomain);
-          }
+        return new Response(`Invalid target domain: ${targetDomain}
+`, { status: 400 });
       }
+      isDockerRequest = ["quay.io", "gcr.io", "k8s.gcr.io", "registry.k8s.io", "ghcr.io", "docker.cloudsmith.io", "registry-1.docker.io", "docker.io"].includes(targetDomain);
+      if (targetDomain === "docker.io") targetDomain = "registry-1.docker.io";
+    } catch (error) {
+      return new Response(`Invalid URL format: ${path}
+`, { status: 400 });
+    }
+  } else {
+    const pathParts = path.split("/").filter(Boolean);
+    if (pathParts.length === 0) {
+      return new Response("Invalid request path\n", { status: 400 });
+    }
+    targetDomain = pathParts[0];
+    if (!config.ALLOWED_HOSTS.includes(targetDomain)) {
+      const isPotentialDockerImage = !targetDomain.includes(".") && !targetDomain.includes(":");
+      if (isPotentialDockerImage) {
+        isDockerRequest = true;
+        targetDomain = "registry-1.docker.io";
+        targetPath = pathParts.length === 1 ? `library/${pathParts[0]}` : pathParts.join("/");
+      } else {
+        return new Response(`Invalid target domain: ${targetDomain}
+`, { status: 400 });
+      }
+    } else {
+      targetPath = pathParts.slice(1).join("/") + url.search;
+      if (pathParts[0] === "docker.io") {
+        isDockerRequest = true;
+        targetDomain = "registry-1.docker.io";
+        targetPath = pathParts.length === 2 ? `library/${pathParts[1]}` : pathParts.slice(1).join("/");
+      } else {
+        isDockerRequest = ["quay.io", "gcr.io", "k8s.gcr.io", "registry.k8s.io", "ghcr.io", "docker.cloudsmith.io", "registry-1.docker.io"].includes(targetDomain);
+      }
+    }
   }
-
-  // 确保不为空
   if (!targetDomain) {
-      return new Response('Invalid target domain\n', {status: 400});
+    return new Response("Invalid target domain\n", { status: 400 });
   }
   if (!targetPath) {
-      targetPath = '';
+    targetPath = "";
   }
-
-  // 处理 /refs/heads/ 路径问题
-  if (targetDomain === 'raw.githubusercontent.com' && targetPath.includes('/refs/heads/')) {
-      const originalPath = targetPath;
-      targetPath = targetPath.replace('/refs/heads/', '/');
+  if (targetDomain === "raw.githubusercontent.com" && targetPath.includes("/refs/heads/")) {
+    const originalPath = targetPath;
+    targetPath = targetPath.replace("/refs/heads/", "/");
   }
-
-  // 路径白名单检查
-  if (config.RESTRICT_PATHS && targetPath && !config.ALLOWED_PATHS.some(p => targetPath.toLowerCase().includes(p.toLowerCase()))) {
-      return new Response('Path not allowed\n', {status: 403});
+  if (config.RESTRICT_PATHS && targetPath && !config.ALLOWED_PATHS.some((p) => targetPath.toLowerCase().includes(p.toLowerCase()))) {
+    return new Response("Path not allowed\n", { status: 403 });
   }
-
-  // 🔧 关键修复：重新设计私有仓库处理逻辑
   let isGitHubPrivateFile = false;
   let privateToken = null;
-
-  // 检查是否是 GitHub raw 文件且需要认证
-  if (targetDomain === 'raw.githubusercontent.com') {
-      const testUrl = `https://${targetDomain}/${targetPath}`;
-
-      privateToken = getPrivateToken(testUrl, env, tokenMapping);
-
-      if (privateToken) {
-          // 解析路径
-          const pathParts = targetPath.split('/');
-
-          if (pathParts.length >= 3) {
-              const user = pathParts[0];
-              const repo = pathParts[1];
-              const branch = pathParts[2];
-              const filePath = pathParts.slice(3).join('/');
-
-              // 转换为 GitHub API 路径
-              targetDomain = 'api.github.com';
-              targetPath = `repos/${user}/${repo}/contents/${filePath}?ref=${branch}`;
-              isGitHubPrivateFile = true;
-          }
+  if (targetDomain === "raw.githubusercontent.com") {
+    const testUrl = `https://${targetDomain}/${targetPath}`;
+    privateToken = getPrivateToken(testUrl, env, tokenMapping);
+    if (privateToken) {
+      const pathParts = targetPath.split("/");
+      if (pathParts.length >= 3) {
+        const user = pathParts[0];
+        const repo = pathParts[1];
+        const branch = pathParts[2];
+        const filePath = pathParts.slice(3).join("/");
+        targetDomain = "api.github.com";
+        targetPath = `repos/${user}/${repo}/contents/${filePath}?ref=${branch}`;
+        isGitHubPrivateFile = true;
       }
+    }
   }
-
-  // 构建目标 URL
   let targetUrl;
   if (isDockerRequest) {
-      if (!targetPath.startsWith('v2/')) {
-          targetUrl = `https://${targetDomain}/v2/${targetPath}`;
-      } else {
-          targetUrl = `https://${targetDomain}/${targetPath}`;
-      }
-  } else {
+    if (!targetPath.startsWith("v2/")) {
+      targetUrl = `https://${targetDomain}/v2/${targetPath}`;
+    } else {
       targetUrl = `https://${targetDomain}/${targetPath}`;
+    }
+  } else {
+    targetUrl = `https://${targetDomain}/${targetPath}`;
   }
-
   const headers = new Headers(request.headers);
-  headers.set('Host', targetDomain);
-
-  // 清理可能干扰的头部
-  headers.delete('x-amz-content-sha256');
-  headers.delete('x-amz-date');
-  headers.delete('x-amz-security-token');
-  headers.delete('x-amz-user-agent');
-
-  // 🔧 关键修复：重新设计认证头设置
+  headers.set("Host", targetDomain);
+  headers.delete("x-amz-content-sha256");
+  headers.delete("x-amz-date");
+  headers.delete("x-amz-security-token");
+  headers.delete("x-amz-user-agent");
   if (isGitHubPrivateFile && privateToken) {
-      headers.set('Authorization', `token ${privateToken}`);
-      headers.set('Accept', 'application/vnd.github.v3.raw');
-      headers.set('User-Agent', 'Cloudflare-Worker');
-  } else if (targetDomain === 'raw.githubusercontent.com' && privateToken) {
-      headers.set('Authorization', `token ${privateToken}`);
-      headers.set('Accept', 'application/vnd.github.v3.raw');
+    headers.set("Authorization", `token ${privateToken}`);
+    headers.set("Accept", "application/vnd.github.v3.raw");
+    headers.set("User-Agent", "Cloudflare-Worker");
+  } else if (targetDomain === "raw.githubusercontent.com" && privateToken) {
+    headers.set("Authorization", `token ${privateToken}`);
+    headers.set("Accept", "application/vnd.github.v3.raw");
   }
-
   let response;
   let redirects = 0;
   const MAX_REDIRECTS = 5;
   let currentUrl = targetUrl;
-
   try {
-      while (redirects <= MAX_REDIRECTS) {
-          if (isAmazonS3(currentUrl)) {
-              headers.set('x-amz-content-sha256', getEmptyBodySHA256());
-              headers.set('x-amz-date', new Date().toISOString().replace(/[-:T]/g, '').slice(0, -5) + 'Z');
-          }
-
-          response = await fetch(currentUrl, {
-              method: request.method,
-              headers: headers,
-              body: request.body,
-              redirect: 'manual'
-          });
-
-          // 处理 Docker 认证
-          if (isDockerRequest && response.status === 401) {
-              const wwwAuth = response.headers.get('WWW-Authenticate');
-              if (wwwAuth) {
-                  const m = wwwAuth.match(/Bearer realm="([^"]+)",service="([^"]*)",scope="([^"]*)"/);
-                  if (m) {
-                      const [, realm, service, scope] = m;
-                      const token = await handleToken(realm, service || targetDomain, scope, env, currentUrl, tokenMapping);
-                      if (token) {
-                          headers.set('Authorization', `Bearer ${token}`);
-                          response = await fetch(currentUrl, {
-                              method: request.method,
-                              headers: headers,
-                              body: request.body,
-                              redirect: 'manual'
-                          });
-                      }
-                  }
-              }
-          }
-
-          // 检查重定向
-          if ((response.status === 302 || response.status === 307) && response.headers.get('Location')) {
-              const redirectUrl = response.headers.get('Location');
-
-              if (redirectUrl.includes(url.hostname)) {
-                  break;
-              }
-
-              currentUrl = redirectUrl;
-              redirects++;
-              continue;
-          }
-
-          break;
+    while (redirects <= MAX_REDIRECTS) {
+      if (isAmazonS3(currentUrl)) {
+        headers.set("x-amz-content-sha256", getEmptyBodySHA256());
+        headers.set("x-amz-date", (/* @__PURE__ */ new Date()).toISOString().replace(/[-:T]/g, "").slice(0, -5) + "Z");
       }
-
-      if (redirects > MAX_REDIRECTS) {
-          return new Response(`Too many redirects (${redirects})\n`, {status: 508});
-      }
-
-      // 🔧 关键修复：重新设计 GitHub API 响应处理
-      let responseBody = response.body;
-      let responseStatus = response.status;
-      let responseHeaders = new Headers(response.headers);
-
-      // 如果是 GitHub API 响应
-      if (isGitHubPrivateFile) {
-          if (responseStatus === 200) {
-              const contentType = responseHeaders.get('content-type') || '';
-
-              if (contentType.includes('application/json')) {
-                  try {
-                      const apiResponse = await response.json();
-
-                      if (apiResponse.content) {
-                          const content = atob(apiResponse.content.replace(/\n/g, ''));
-                          responseBody = content;
-                          responseHeaders.set('content-type', 'text/plain; charset=utf-8');
-                          responseHeaders.set('content-length', content.length.toString());
-                      } else {
-                          responseBody = JSON.stringify(apiResponse, null, 2);
-                      }
-                  } catch (e) {
-                      responseBody = `Error processing GitHub API response: ${e.message}`;
-                  }
-              }
-          } else {
-              // 处理错误响应
-              try {
-                  const errorText = await response.text();
-                  responseBody = `GitHub API Error (${responseStatus}): ${errorText}`;
-              } catch (e) {
-                  responseBody = `GitHub API Error: ${responseStatus}`;
-              }
-          }
-      }
-
-      const finalResponse = new Response(responseBody, {
-          status: responseStatus,
-          headers: responseHeaders
+      response = await fetch(currentUrl, {
+        method: request.method,
+        headers,
+        body: request.body,
+        redirect: "manual"
       });
-
-      finalResponse.headers.set('Access-Control-Allow-Origin', '*');
-      finalResponse.headers.set('Access-Control-Allow-Methods', 'GET, HEAD, POST, OPTIONS');
-
-      if (isDockerRequest) {
-          finalResponse.headers.set('Docker-Distribution-API-Version', 'registry/2.0');
+      if (isDockerRequest && response.status === 401) {
+        const wwwAuth = response.headers.get("WWW-Authenticate");
+        if (wwwAuth) {
+          const m = wwwAuth.match(/Bearer realm="([^"]+)",service="([^"]*)",scope="([^"]*)"/);
+          if (m) {
+            const [, realm, service, scope] = m;
+            const token = await handleToken(realm, service || targetDomain, scope, env, currentUrl, tokenMapping);
+            if (token) {
+              headers.set("Authorization", `Bearer ${token}`);
+              response = await fetch(currentUrl, {
+                method: request.method,
+                headers,
+                body: request.body,
+                redirect: "manual"
+              });
+            }
+          }
+        }
       }
-
-      return finalResponse;
-
+      if ((response.status === 302 || response.status === 307) && response.headers.get("Location")) {
+        const redirectUrl = response.headers.get("Location");
+        if (redirectUrl.includes(url.hostname)) {
+          break;
+        }
+        currentUrl = redirectUrl;
+        redirects++;
+        continue;
+      }
+      break;
+    }
+    if (redirects > MAX_REDIRECTS) {
+      return new Response(`Too many redirects (${redirects})
+`, { status: 508 });
+    }
+    let responseBody = response.body;
+    let responseStatus = response.status;
+    let responseHeaders = new Headers(response.headers);
+    if (isGitHubPrivateFile) {
+      if (responseStatus === 200) {
+        const contentType = responseHeaders.get("content-type") || "";
+        if (contentType.includes("application/json")) {
+          try {
+            const apiResponse = await response.json();
+            if (apiResponse.content) {
+              const content = atob(apiResponse.content.replace(/\n/g, ""));
+              responseBody = content;
+              responseHeaders.set("content-type", "text/plain; charset=utf-8");
+              responseHeaders.set("content-length", content.length.toString());
+            } else {
+              responseBody = JSON.stringify(apiResponse, null, 2);
+            }
+          } catch (e) {
+            responseBody = `Error processing GitHub API response: ${e.message}`;
+          }
+        }
+      } else {
+        try {
+          const errorText = await response.text();
+          responseBody = `GitHub API Error (${responseStatus}): ${errorText}`;
+        } catch (e) {
+          responseBody = `GitHub API Error: ${responseStatus}`;
+        }
+      }
+    }
+    const finalResponse = new Response(responseBody, {
+      status: responseStatus,
+      headers: responseHeaders
+    });
+    finalResponse.headers.set("Access-Control-Allow-Origin", "*");
+    finalResponse.headers.set("Access-Control-Allow-Methods", "GET, HEAD, POST, OPTIONS");
+    if (isDockerRequest) {
+      finalResponse.headers.set("Docker-Distribution-API-Version", "registry/2.0");
+    }
+    return finalResponse;
   } catch (error) {
-      return new Response(`Error fetching from ${targetDomain}: ${error.message}\n`, {status: 500});
+    return new Response(`Error fetching from ${targetDomain}: ${error.message}
+`, { status: 500 });
   }
 }
-
-export default {
+__name(handleRequest, "handleRequest");
+var worker_default = {
   async fetch(request, env, ctx) {
-      return handleRequest(request, env);
+    return handleRequest(request, env);
   }
 };
+export {
+  worker_default as default
+};
+//# sourceMappingURL=_worker.js.map
